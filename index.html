@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabDecode — расшифровка анализов простыми словами</title>
+  <meta name="description" content="Загрузите анализы и получите понятную расшифровку показателей, объяснение отклонений и список вопросов к врачу.">
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --text: #15233a;
+      --muted: #51607b;
+      --primary: #2864ff;
+      --primary-dark: #1d4bd1;
+      --accent: #0dbf84;
+      --border: #dce4f2;
+      --danger: #ffefef;
+      --danger-text: #9b1c1c;
+      --shadow: 0 8px 24px rgba(21, 35, 58, 0.08);
+      --radius: 16px;
+      --max: 1120px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eef3ff 0%, var(--bg) 220px);
+      line-height: 1.5;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(var(--max), 92vw);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(8px);
+      background: rgba(247, 249, 252, 0.8);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      gap: 12px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .brand__icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), #5f8eff);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      box-shadow: var(--shadow);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      transition: 0.2s ease;
+    }
+
+    .btn--primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn--primary:hover { background: var(--primary-dark); }
+
+    .btn--ghost {
+      background: #fff;
+      border: 1px solid var(--border);
+    }
+
+    .hero {
+      padding: 56px 0 28px;
+    }
+
+    .hero__grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero__content {
+      padding: 34px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      background: #ebfff7;
+      color: #0b7d58;
+      border: 1px solid #b5ecd9;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.08;
+      margin-bottom: 14px;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 18px;
+      margin-bottom: 22px;
+    }
+
+    .hero__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat {
+      background: #f7faff;
+      border: 1px solid #d9e7ff;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .stat__value {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat__label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .upload {
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .upload__title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .dropzone {
+      border: 2px dashed #bdd0f9;
+      background: #f8fbff;
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .dropzone strong {
+      color: var(--text);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      color: inherit;
+      background: #fff;
+    }
+
+    .consent {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    section {
+      padding: 28px 0;
+    }
+
+    .section-title {
+      margin-bottom: 14px;
+      font-size: clamp(24px, 3vw, 34px);
+    }
+
+    .section-lead {
+      color: var(--muted);
+      margin-bottom: 20px;
+      max-width: 760px;
+    }
+
+    .steps, .benefits, .trust, .pricing {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .item {
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #fff;
+    }
+
+    .item h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .item p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .num {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      background: #e9f0ff;
+      color: var(--primary);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .sample {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .report {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .pill {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .pill--ok { background: #e9fbf3; color: #0b7d58; }
+    .pill--warn { background: #fff7e7; color: #8a5a00; }
+
+    .report ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+
+    .disclaimer {
+      background: var(--danger);
+      color: var(--danger-text);
+      border: 1px solid #ffd3d3;
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    details {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+
+    details + details { margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    details p { color: var(--muted); margin-top: 8px; }
+
+    .cta {
+      padding: 26px;
+      border-radius: var(--radius);
+      border: 1px solid #c8d7ff;
+      background: linear-gradient(135deg, #f4f7ff, #edf7ff);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    footer {
+      margin-top: 30px;
+      padding: 24px 0 40px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .footer-links a {
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2px;
+    }
+
+    @media (max-width: 980px) {
+      .hero__grid,
+      .sample {
+        grid-template-columns: 1fr;
+      }
+      .steps, .benefits, .trust, .pricing {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding-top: 28px; }
+      .hero__content { padding: 24px; }
+      .steps, .benefits, .trust, .pricing, .stats {
+        grid-template-columns: 1fr;
+      }
+      .topbar__inner { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <a href="#top" class="brand">
+        <span class="brand__icon">L</span>
+        <span>LabDecode</span>
+      </a>
+      <a href="#upload" class="btn btn--primary">Попробовать бесплатно</a>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="container hero__grid">
+        <div class="card hero__content">
+          <span class="badge">Безопасно • Понятно • За 5 минут</span>
+          <h1>Расшифровка анализов простыми словами</h1>
+          <p class="lead">Загрузите бланк анализов и получите структурированный разбор показателей, отклонений и список вопросов для врача.</p>
+          <div class="hero__actions">
+            <a href="#upload" class="btn btn--primary">Загрузить анализ</a>
+            <a href="#sample" class="btn btn--ghost">Посмотреть пример</a>
+          </div>
+          <div class="stats">
+            <div class="stat">
+              <div class="stat__value">5 мин</div>
+              <div class="stat__label">Среднее время ответа</div>
+            </div>
+            <div class="stat">
+              <div class="stat__value">PDF/JPG</div>
+              <div class="stat__label">Поддерживаемые форматы</div>
+            </div>
+            <div class="stat">
+              <div class="stat__value">24/7</div>
+              <div class="stat__label">Сервис доступен онлайн</div>
+            </div>
+          </div>
+        </div>
+
+        <form id="upload" class="card upload">
+          <h2 class="upload__title">Получить расшифровку</h2>
+          <div class="dropzone">
+            <strong>Перетащите файл анализов</strong>
+            или нажмите для выбора (PDF, JPG, PNG)
+          </div>
+          <label>
+            Email для отправки отчета
+            <input type="email" name="email" placeholder="you@example.com" required>
+          </label>
+          <label>
+            Комментарий (необязательно)
+            <textarea name="comment" rows="3" placeholder="Например: хочу понять причины отклонений"></textarea>
+          </label>
+          <button type="submit" class="btn btn--primary">Отправить анализ</button>
+          <p class="consent">Нажимая кнопку, вы принимаете условия обработки персональных данных и политику конфиденциальности.</p>
+        </form>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Как это работает</h2>
+        <p class="section-lead">Три шага, чтобы разобраться в показателях без сложных медицинских терминов.</p>
+        <div class="steps">
+          <article class="item">
+            <div class="num">1</div>
+            <h3>Загрузите анализы</h3>
+            <p>Прикрепите фото или PDF бланка из лаборатории через защищенную форму.</p>
+          </article>
+          <article class="item">
+            <div class="num">2</div>
+            <h3>Получите разбор</h3>
+            <p>Сервис объяснит каждый показатель, отметит отклонения и укажет возможные причины.</p>
+          </article>
+          <article class="item">
+            <div class="num">3</div>
+            <h3>Подготовьтесь к врачу</h3>
+            <p>Вы получите список вопросов для консультации, чтобы быстрее принять решение с врачом.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Что вы получите</h2>
+        <div class="benefits">
+          <article class="item">
+            <h3>Понятный язык</h3>
+            <p>Без перегрузки медицинскими терминами и непонятными сокращениями.</p>
+          </article>
+          <article class="item">
+            <h3>Фокус на отклонениях</h3>
+            <p>Отчет выделяет показатели вне референсных значений и объясняет их значение.</p>
+          </article>
+          <article class="item">
+            <h3>Следующие шаги</h3>
+            <p>Вы понимаете, какие вопросы задать врачу и на что обратить внимание на приеме.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="sample">
+      <div class="container">
+        <h2 class="section-title">Пример результата</h2>
+        <p class="section-lead">Так выглядит фрагмент отчета, который получает пользователь после обработки.</p>
+        <div class="sample">
+          <article class="report">
+            <span class="pill pill--ok">Норма</span>
+            <h3>Гемоглобин: 136 г/л</h3>
+            <p>Показатель находится в пределах нормы для взрослого человека.</p>
+            <ul>
+              <li>Симптомы дефицита железа маловероятны.</li>
+              <li>Дополнительных срочных действий не требуется.</li>
+            </ul>
+          </article>
+          <article class="report">
+            <span class="pill pill--warn">Отклонение</span>
+            <h3>ЛПНП: 4.1 ммоль/л</h3>
+            <p>Показатель выше рекомендуемого диапазона. Стоит обсудить с врачом факторы риска и план коррекции.</p>
+            <ul>
+              <li>Уточнить семейный анамнез и образ жизни.</li>
+              <li>Обсудить стратегию снижения сердечно-сосудистых рисков.</li>
+            </ul>
+          </article>
+        </div>
+        <p class="disclaimer"><strong>Важно:</strong> сервис не ставит диагноз и не заменяет консультацию врача. При выраженном ухудшении состояния обратитесь за неотложной медицинской помощью.</p>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Почему нам доверяют</h2>
+        <div class="trust">
+          <article class="item">
+            <h3>Конфиденциальность</h3>
+            <p>Передача данных по защищенному каналу. Можно удалить отчет и исходные файлы по запросу.</p>
+          </article>
+          <article class="item">
+            <h3>Проверяемая логика</h3>
+            <p>Комментарии в отчете опираются на клинические рекомендации и референсные интервалы.</p>
+          </article>
+          <article class="item">
+            <h3>Прозрачные ограничения</h3>
+            <p>Мы прямо указываем, где нужна очная консультация или срочная медицинская помощь.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">Тарифы</h2>
+        <div class="pricing">
+          <article class="item">
+            <h3>Старт</h3>
+            <p><strong>Бесплатно</strong> — 1 анализ</p>
+            <p>Базовая расшифровка и ключевые комментарии.</p>
+          </article>
+          <article class="item">
+            <h3>Разовый</h3>
+            <p><strong>490 ₽</strong> / анализ</p>
+            <p>Подробный отчет с рекомендациями для обсуждения с врачом.</p>
+          </article>
+          <article class="item">
+            <h3>Семейный</h3>
+            <p><strong>1490 ₽</strong> / месяц</p>
+            <p>До 5 анализов в месяц и приоритетная обработка.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2 class="section-title">FAQ</h2>
+        <details>
+          <summary>Это заменяет прием у врача?</summary>
+          <p>Нет. Отчет помогает подготовиться к консультации, но не является диагнозом или лечением.</p>
+        </details>
+        <details>
+          <summary>Какие форматы анализов поддерживаются?</summary>
+          <p>Вы можете загрузить PDF, JPG или PNG. Желательно, чтобы текст был читаемым и без сильных бликов.</p>
+        </details>
+        <details>
+          <summary>Сколько времени занимает расшифровка?</summary>
+          <p>Обычно до 5 минут, в часы пик — до 15 минут.</p>
+        </details>
+        <details>
+          <summary>Можно удалить данные после получения отчета?</summary>
+          <p>Да, вы можете запросить удаление исходных файлов и отчета через поддержку.</p>
+        </details>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="cta">
+          <div>
+            <h2>Готовы разобраться в анализах без стресса?</h2>
+            <p class="section-lead" style="margin: 6px 0 0;">Загрузите первый анализ бесплатно и получите понятный отчет уже сегодня.</p>
+          </div>
+          <a href="#upload" class="btn btn--primary">Начать сейчас</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <strong>LabDecode</strong>
+      <p>ООО "ЛабДекод", ИНН 0000000000, support@labdecode.ru</p>
+      <div class="footer-links">
+        <a href="#">Политика конфиденциальности</a>
+        <a href="#">Согласие на обработку данных</a>
+        <a href="#">Пользовательское соглашение</a>
+        <a href="#">Медицинский дисклеймер</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const form = document.getElementById("upload");
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      alert("Спасибо! Это демо-форма. На следующем шаге можно подключить отправку в Telegram, email или CRM.");
+    });
+  </script>
+</body>
+</html>
