@@ -461,6 +461,7 @@
             <textarea name="comment" rows="3" placeholder="Например: хочу понять причины отклонений"></textarea>
           </label>
           <button type="submit" class="btn btn--primary">Отправить анализ</button>
+          <div class="consent" id="form-result" aria-live="polite"></div>
           <p class="consent">Нажимая кнопку, вы принимаете условия обработки персональных данных и политику конфиденциальности.</p>
         </form>
       </div>
@@ -630,75 +631,164 @@
   </footer>
 
   <script>
-    const form = document.getElementById("upload");
-    const fileInput = document.getElementById("analysis-file");
-    const dropzone = document.getElementById("dropzone");
-    const fileStatus = document.getElementById("file-status");
-    const fileTitle = document.getElementById("file-title");
-    const fileSubtitle = document.getElementById("file-subtitle");
-    const formError = document.getElementById("form-error");
+    document.addEventListener("DOMContentLoaded", () => {
+      const form = document.getElementById("upload");
+      const fileInput = document.getElementById("analysis-file");
+      const dropzone = document.getElementById("dropzone");
+      const fileStatus = document.getElementById("file-status");
+      const fileTitle = document.getElementById("file-title");
+      const fileSubtitle = document.getElementById("file-subtitle");
+      const formError = document.getElementById("form-error");
+      const formResult = document.getElementById("form-result");
 
-    const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+      if (!form || !fileInput || !dropzone || !fileStatus || !fileTitle || !fileSubtitle || !formError) {
+        return;
+      }
 
-    function renderFile(file) {
-      fileTitle.textContent = "Файл выбран";
-      fileSubtitle.textContent = file.name;
-      fileStatus.textContent = `Размер: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
-      formError.style.display = "none";
-    }
+      // Укажи сюда email, на который будут приходить заявки с файлами.
+      const RECEIVER_EMAIL = "mega.abashkina@mail.ru";
+      const allowedExtensions = [".pdf", ".jpg", ".jpeg", ".png"];
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
 
-    function validateFile(file) {
-      return Boolean(file && allowedTypes.includes(file.type));
-    }
+      function hasAllowedExtension(fileName) {
+        const lower = fileName.toLowerCase();
+        return allowedExtensions.some((ext) => lower.endsWith(ext));
+      }
 
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files[0];
-      if (!validateFile(file)) {
-        fileInput.value = "";
-        fileTitle.textContent = "Неверный формат файла";
-        fileSubtitle.textContent = "Выберите PDF, JPG или PNG";
+      function validateFile(file) {
+        if (!file) return false;
+        if (file.type && allowedTypes.includes(file.type)) return true;
+        return hasAllowedExtension(file.name || "");
+      }
+
+      function resetFileState() {
+        fileTitle.textContent = "Перетащите файл анализов";
+        fileSubtitle.textContent = "или нажмите для выбора (PDF, JPG, PNG)";
         fileStatus.textContent = "Файл не выбран";
-        formError.style.display = "block";
-        return;
-      }
-      renderFile(file);
-    });
-
-    dropzone.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      dropzone.style.borderColor = "#2864ff";
-    });
-
-    dropzone.addEventListener("dragleave", () => {
-      dropzone.style.borderColor = "#bdd0f9";
-    });
-
-    dropzone.addEventListener("drop", (event) => {
-      event.preventDefault();
-      dropzone.style.borderColor = "#bdd0f9";
-      const file = event.dataTransfer.files[0];
-      if (!validateFile(file)) {
-        formError.style.display = "block";
-        return;
-      }
-      const transfer = new DataTransfer();
-      transfer.items.add(file);
-      fileInput.files = transfer.files;
-      renderFile(file);
-    });
-
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const file = fileInput.files[0];
-      if (!validateFile(file)) {
-        formError.style.display = "block";
-        return;
       }
 
-      const email = form.querySelector('input[name="email"]').value.trim();
-      const message = "Форма валидна и готова к отправке. Следующий шаг: подключить backend/интеграцию для приема файлов.";
-      fileStatus.textContent = `Готово: ${file.name} (${email})`;
-      alert(message);
+      function showError() {
+        formError.style.display = "block";
+      }
+
+      function hideError() {
+        formError.style.display = "none";
+      }
+
+      function setResult(message, isError) {
+        if (!formResult) return;
+        formResult.textContent = message;
+        formResult.style.color = isError ? "#9b1c1c" : "#0b7d58";
+      }
+
+      function renderFile(file) {
+        fileTitle.textContent = "Файл выбран";
+        fileSubtitle.textContent = file.name;
+        fileStatus.textContent = `Размер: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+        hideError();
+      }
+
+      resetFileState();
+
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!validateFile(file)) {
+          fileInput.value = "";
+          fileTitle.textContent = "Неверный формат файла";
+          fileSubtitle.textContent = "Выберите PDF, JPG или PNG";
+          fileStatus.textContent = "Файл не выбран";
+          showError();
+          return;
+        }
+        renderFile(file);
+      });
+
+      dropzone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        dropzone.style.borderColor = "#2864ff";
+      });
+
+      dropzone.addEventListener("dragleave", () => {
+        dropzone.style.borderColor = "#bdd0f9";
+      });
+
+      dropzone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        dropzone.style.borderColor = "#bdd0f9";
+        const file = event.dataTransfer && event.dataTransfer.files ? event.dataTransfer.files[0] : null;
+        if (!validateFile(file)) {
+          showError();
+          return;
+        }
+
+        if (typeof DataTransfer !== "undefined") {
+          const transfer = new DataTransfer();
+          transfer.items.add(file);
+          fileInput.files = transfer.files;
+        }
+
+        renderFile(file);
+      });
+
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const file = fileInput.files && fileInput.files[0];
+        const emailInput = form.querySelector('input[name="email"]');
+        const email = emailInput ? emailInput.value.trim() : "";
+
+        if (!validateFile(file)) {
+          showError();
+          return;
+        }
+
+        if (!email) {
+          setResult("Пожалуйста, укажите email.", true);
+          return;
+        }
+
+        if (RECEIVER_EMAIL === "mega.abashkina@mail.ru") {
+          setResult("Сначала укажи свой email в переменной RECEIVER_EMAIL внизу файла.", true);
+          return;
+        }
+
+        const submitButton = form.querySelector('button[type="submit"]');
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = "Отправляем...";
+        }
+
+        setResult("Отправляем файл, подождите...", false);
+
+        const formData = new FormData(form);
+        formData.append("_subject", "Новая заявка с лендинга анализов");
+        formData.append("_captcha", "false");
+
+        fetch(`https://formsubmit.co/ajax/${RECEIVER_EMAIL}`, {
+          method: "POST",
+          body: formData,
+          headers: { "Accept": "application/json" }
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.success) {
+              throw new Error("Ошибка сервиса отправки");
+            }
+
+            form.reset();
+            fileInput.value = "";
+            resetFileState();
+            setResult("Готово! Заявка отправлена. Проверь входящие письма и папку Спам.", false);
+          })
+          .catch(() => {
+            setResult("Не удалось отправить форму. Проверь интернет и попробуй еще раз.", true);
+          })
+          .finally(() => {
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.textContent = "Отправить анализ";
+            }
+          });
+      });
     });
   </script>
 </body>
